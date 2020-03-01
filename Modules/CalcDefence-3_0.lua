@@ -26,7 +26,7 @@ local resistTypeList = { "Fire", "Cold", "Lightning", "Chaos" }
 -- Calculate hit chance
 function calcs.hitChance(evasion, accuracy)
 	local rawChance = accuracy / (accuracy + (evasion / 4) ^ 0.8) * 115
-	return m_max(m_min(round(rawChance), 100), 5)	
+	return m_max(m_min(round(rawChance), 100), 5)
 end
 
 -- Calculate physical damage reduction from armour
@@ -169,7 +169,7 @@ function calcs.defence(env, actor)
 		local convManaToES = modDB:Sum("BASE", nil, "ManaGainAsEnergyShield")
 		if convManaToES > 0 then
 			energyShieldBase = modDB:Sum("BASE", nil, "Mana") * convManaToES / 100
-			energyShield = energyShield + energyShieldBase * calcLib.mod(modDB, nil, "Mana", "EnergyShield", "Defences") 
+			energyShield = energyShield + energyShieldBase * calcLib.mod(modDB, nil, "Mana", "EnergyShield", "Defences")
 			if breakdown then
 				breakdown.slot("Conversion", "Mana to Energy Shield", nil, energyShieldBase, nil, "EnergyShield", "Defences", "Mana")
 			end
@@ -274,7 +274,7 @@ function calcs.defence(env, actor)
 				base = s_format("%.1f", regen),
 				{ "%.2f ^8(recovery rate modifier)", output.ManaRecoveryRateMod },
 				total = s_format("= %.1f ^8per second", output.ManaRegen),
-			})				
+			})
 		end
 	end
 	if modDB:Flag(nil, "NoLifeRegen") then
@@ -342,7 +342,7 @@ function calcs.defence(env, actor)
 				base = s_format("%.1f", recharge),
 				{ "%.2f ^8(recovery rate modifier)", output.EnergyShieldRecoveryRateMod },
 				total = s_format("= %.1f ^8per second", output.EnergyShieldRecharge),
-			})				
+			})
 			if output.EnergyShieldRechargeDelay ~= 2 then
 				breakdown.EnergyShieldRechargeDelay = {
 					"2.00s ^8(base)",
@@ -417,7 +417,7 @@ function calcs.defence(env, actor)
 				output[damageType.."Degen"] = total
 				output.TotalDegen = (output.TotalDegen or 0) + total
 				if breakdown then
-					breakdown.TotalDegen = breakdown.TotalDegen or { 
+					breakdown.TotalDegen = breakdown.TotalDegen or {
 						rowList = { },
 						colList = {
 							{ label = "Type", key = "type" },
@@ -459,7 +459,7 @@ function calcs.defence(env, actor)
 			output.NetLifeRegen = totalRegen - output.TotalDegen
 			if breakdown then
 				breakdown.NetLifeRegen = {
-					s_format("%.1f ^8(total life%s regen)", totalRegen, modDB:Flag(nil, "EnergyShieldProtectsMana") and "" or " + energy shield"),	
+					s_format("%.1f ^8(total life%s regen)", totalRegen, modDB:Flag(nil, "EnergyShieldProtectsMana") and "" or " + energy shield"),
 					s_format("- %.1f ^8(total degen)", output.TotalDegen),
 					s_format("= %.1f", output.NetLifeRegen),
 				}
@@ -492,7 +492,7 @@ function calcs.defence(env, actor)
 		-- Calculate incoming damage multiplier
 		local mult = 0
 		if breakdown then
-			breakdown[damageType.."TakenHitMult"] = { 
+			breakdown[damageType.."TakenHitMult"] = {
 				label = "Hit Damage taken as",
 				rowList = { },
 				colList = {
@@ -559,6 +559,7 @@ function calcs.defence(env, actor)
 		end
 		output.BlockChanceMax = modDB:Sum("BASE", nil, "BlockChanceMax")
 		local baseBlockChance = 0
+		local totalBlockChance = 0
 		if actor.itemList["Weapon 2"] and actor.itemList["Weapon 2"].armourData then
 			baseBlockChance = baseBlockChance + actor.itemList["Weapon 2"].armourData.BlockChance
 		end
@@ -569,7 +570,9 @@ function calcs.defence(env, actor)
 		if modDB:Flag(nil, "MaxBlockIfNotBlockedRecently") then
 			output.BlockChance = output.BlockChanceMax
 		else
-			output.BlockChance = m_min((baseBlockChance + modDB:Sum("BASE", nil, "BlockChance")) * calcLib.mod(modDB, nil, "BlockChance"), output.BlockChanceMax) 
+			totalBlockChance = (baseBlockChance + modDB:Sum("BASE", nil, "BlockChance")) * calcLib.mod(modDB, nil, "BlockChance")
+			output.BlockChance = m_min(totalBlockChance, output.BlockChanceMax)
+			output.BlockChanceOverCap = m_max(0, totalBlockChance - output.BlockChanceMax)
 		end
 		if modDB:Flag(nil, "SpellBlockChanceMaxIsBlockChanceMax") then
 			output.SpellBlockChanceMax = output.BlockChanceMax
@@ -578,8 +581,10 @@ function calcs.defence(env, actor)
 		end
 		if modDB:Flag(nil, "SpellBlockChanceIsBlockChance") then
 			output.SpellBlockChance = output.BlockChance
+			output.SpellBlockChanceOverCap = output.BlockChanceOverCap
 		else
-			output.SpellBlockChance = m_min(modDB:Sum("BASE", nil, "SpellBlockChance") * calcLib.mod(modDB, nil, "SpellBlockChance"), output.SpellBlockChanceMax) 
+			output.SpellBlockChance = m_min(modDB:Sum("BASE", nil, "SpellBlockChance") * calcLib.mod(modDB, nil, "SpellBlockChance"), output.SpellBlockChanceMax)
+			output.SpellBlockChanceOverCap = m_max(0, output.SpellBlockChance - output.SpellBlockChanceMax)
 		end
 		if breakdown then
 			breakdown.BlockChance = breakdown.simple(baseBlockChance, nil, output.BlockChance, "BlockChance")
