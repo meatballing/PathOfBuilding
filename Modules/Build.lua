@@ -196,7 +196,7 @@ function buildMode:Init(dbFileName, buildName, buildXML, targetVersion)
 				end
 				if mult > 0.01 then
 					local line = level
-					if level >= 68 then 
+					if level >= 68 then
 						line = line .. string.format(" (Tier %d)", level - 67)
 					end
 					line = line .. string.format(": %.1f%%", mult * 100)
@@ -215,7 +215,7 @@ function buildMode:Init(dbFileName, buildName, buildXML, targetVersion)
 				main:OpenConfirmPopup("Class Change", "Changing class to "..value.label.." will reset your passive tree.\nThis can be avoided by connecting one of the "..value.label.." starting nodes to your tree.", "Continue", function()
 					self.spec:SelectClass(value.classId)
 					self.spec:AddUndoState()
-					self.buildFlag = true					
+					self.buildFlag = true
 				end)
 			end
 		end
@@ -307,20 +307,15 @@ function buildMode:Init(dbFileName, buildName, buildXML, targetVersion)
 		{ stat = "Spec:ArmourInc", label = "%Inc Armour from Tree", fmt = "d%%" },
 		{ stat = "PhysicalDamageReduction", label = "Phys. Damage Reduction", fmt = "d%%" },
 		{ stat = "EffectiveMovementSpeedMod", label = "Movement Speed Modifier", fmt = "+d%%", mod = true, condFunc = function() return true end },
-		{ stat = "BlockChance", label = "Block Chance", fmt = "d%%" },
-		{ stat = "SpellBlockChance", label = "Spell Block Chance", fmt = "d%%" },
+		{ stat = "BlockChance", label = "Block Chance", fmt = "d%%", overCapStat = "BlockChanceOverCap" },
+		{ stat = "SpellBlockChance", label = "Spell Block Chance", fmt = "d%%", overCapStat = "SpellBlockChanceOverCap"},
 		{ stat = "AttackDodgeChance", label = "Attack Dodge Chance", fmt = "d%%" },
 		{ stat = "SpellDodgeChance", label = "Spell Dodge Chance", fmt = "d%%" },
 		{ },
-		{ stat = "FireResist", label = "Fire Resistance", fmt = "d%%", color = colorCodes.FIRE, condFunc = function() return true end },
-		{ stat = "ColdResist", label = "Cold Resistance", fmt = "d%%", color = colorCodes.COLD, condFunc = function() return true end },
-		{ stat = "LightningResist", label = "Lightning Resistance", fmt = "d%%", color = colorCodes.LIGHTNING, condFunc = function() return true end },
-		{ stat = "ChaosResist", label = "Chaos Resistance", fmt = "d%%", color = colorCodes.CHAOS, condFunc = function() return true end },
-		{ },
-		{ stat = "FireResistOverCap", label = "Fire Res. Over Max", fmt = "d%%", color = colorCodes.FIRE },
-		{ stat = "ColdResistOverCap", label = "Cold Res. Over Max", fmt = "d%%", color = colorCodes.COLD },
-		{ stat = "LightningResistOverCap", label = "Lightning Res. Over Max", fmt = "d%%", color = colorCodes.LIGHTNING },
-		{ stat = "ChaosResistOverCap", label = "Chaos Res. Over Max", fmt = "d%%", color = colorCodes.CHAOS },
+		{ stat = "FireResist", label = "Fire Resistance", fmt = "d%%", color = colorCodes.FIRE, condFunc = function() return true end, overCapStat = "FireResistOverCap"},
+		{ stat = "ColdResist", label = "Cold Resistance", fmt = "d%%", color = colorCodes.COLD, condFunc = function() return true end, overCapStat = "ColdResistOverCap" },
+		{ stat = "LightningResist", label = "Lightning Resistance", fmt = "d%%", color = colorCodes.LIGHTNING, condFunc = function() return true end, overCapStat = "LightningResistOverCap" },
+		{ stat = "ChaosResist", label = "Chaos Resistance", fmt = "d%%", color = colorCodes.CHAOS, condFunc = function() return true end, overCapStat = "ChaosResistOverCap" },
 	}
 	self.minionDisplayStats = {
 		{ stat = "AverageDamage", label = "Average Damage", fmt = ".1f", compPercent = true },
@@ -671,7 +666,7 @@ function buildMode:Shutdown()
 	if launch.devMode and self.targetVersion and not self.abortSave then
 		if self.dbFileName then
 			self:SaveDBFile()
-		elseif self.unsaved then		
+		elseif self.unsaved then
 			self.dbFileName = main.buildPath.."~~temp~~.xml"
 			self.buildName = "~~temp~~"
 			self.dbFileSubPath = ""
@@ -824,7 +819,7 @@ function buildMode:OnFrame(inputEvents)
 			self.controls[diff]:SelByValue(self[diff], "id")
 		end
 	end
-	
+
 	if self.buildFlag then
 		-- Rebuild calculation output tables
 		self.outputRevision = self.outputRevision + 1
@@ -1003,7 +998,7 @@ function buildMode:OpenSpectreLibrary()
 	for id in pairs(self.data.spectres) do
 		t_insert(sourceList, id)
 	end
-	table.sort(sourceList, function(a,b) 
+	table.sort(sourceList, function(a,b)
 		if self.data.minions[a].name == self.data.minions[b].name then
 			return a < b
 		else
@@ -1129,17 +1124,24 @@ function buildMode:AddDisplayStatList(statList, actor)
 	local statBoxList = self.controls.statBox.list
 	for index, statData in ipairs(statList) do
 		if statData.stat then
-			if not statData.flag or actor.mainSkill.skillFlags[statData.flag] then 
+			if not statData.flag or actor.mainSkill.skillFlags[statData.flag] then
 				local statVal = actor.output[statData.stat]
 				if statVal and ((statData.condFunc and statData.condFunc(statVal,actor.output)) or (not statData.condFunc and statVal ~= 0)) then
 					local labelColor = "^7"
 					if statData.color then
 						labelColor = statData.color
 					end
+					local overCapStatLabel = ""
+					if (statData.overCapStat) then
+						local overCapStatVal = actor.output[statData.overCapStat]
+						if (overCapStatVal) then
+							overCapStatLabel = " ^7(+"..self:FormatStat(statData, overCapStatVal).."^7)"
+						end
+					end
 					t_insert(statBoxList, {
 						height = 16,
 						labelColor..statData.label..":",
-						self:FormatStat(statData, statVal),
+						self:FormatStat(statData, statVal)..overCapStatLabel,
 					})
 				end
 			end
@@ -1233,7 +1235,7 @@ do
 		if req[1] then
 			tooltip:AddLine(16, "^x7F7F7FRequires "..table.concat(req, "^x7F7F7F, "))
 			tooltip:AddSeparator(10)
-		end	
+		end
 		wipeTable(req)
 	end
 end
