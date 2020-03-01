@@ -1106,7 +1106,7 @@ function buildMode:RefreshSkillSelectControls(controls, mainGroup, suffix)
 	end
 end
 
-function buildMode:FormatStat(statData, statVal)
+function buildMode:FormatStat(statData, statVal, overCapStat)
 	local val = statVal * ((statData.pc or statData.mod) and 100 or 1) - (statData.mod and 100 or 0)
 	local color = (statVal >= 0 and "^7" or colorCodes.NEGATIVE)
 	local valStr = s_format("%"..statData.fmt, val)
@@ -1114,6 +1114,9 @@ function buildMode:FormatStat(statData, statVal)
 		valStr = color .. formatNumSep(valStr)
 	else
 		valStr = color .. valStr
+	end
+	if overCapStat and overCapStat > 0 then
+		valStr = valStr .. colorCodes.POSITIVE .. " (+" .. overCapStat .. "%)"
 	end
 	self.lastShowThousandsSidebar = main.showThousandsSidebar
 	return valStr
@@ -1131,17 +1134,11 @@ function buildMode:AddDisplayStatList(statList, actor)
 					if statData.color then
 						labelColor = statData.color
 					end
-					local overCapStatLabel = ""
-					if (statData.overCapStat) then
-						local overCapStatVal = actor.output[statData.overCapStat]
-						if (overCapStatVal) then
-							overCapStatLabel = " ^7(+"..self:FormatStat(statData, overCapStatVal).."^7)"
-						end
-					end
+					local overCapStatVal = actor.output[statData.overCapStat] or nil
 					t_insert(statBoxList, {
 						height = 16,
 						labelColor..statData.label..":",
-						self:FormatStat(statData, statVal)..overCapStatLabel,
+						self:FormatStat(statData, statVal, overCapStatVal),
 					})
 				end
 			end
